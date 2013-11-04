@@ -1,0 +1,105 @@
+embed
+{{coq
+Require Import Syntax.
+Require Import Maps.
+}}
+
+metavar lockcount, lc ::= {{coq nat}} {{ coq-equality }} {{com Times lock is taken}}
+
+grammar 
+lockstate :: lockstate_ ::=
+    | free                          ::  :: Free
+    | p ( lc )                      ::  :: Taken
+    | p ( 1 )                       :: M:: Start
+    | p ( lc + 1 )                  :: M:: Inc
+    | dec ( p ( lc  ) )             :: M:: Dec
+homs 'lockstate_'
+    :: Start {{coq (lockstate_Taken [[p]] 1)}}
+    :: Inc {{coq (lockstate_Taken [[p]] ([[lc]] + 1)) }}
+    :: Dec {{coq (if beq_nat [[lc]] 0
+                    then lockstate_Free
+                    else lockstate_Taken [[p]] ([[lc]] - 1))}}
+
+grammar
+state, S {{tex \sigma }} :: S_ ::= {{coq PTree.t lockstate}}
+    | Empty                         :: M:: Empty
+    | S [ l -> lockstate ]          :: M:: Update
+homs 'S_'
+    :: Empty  {{tex \epsilon }}
+              {{coq PTree.empty }}
+    :: Update {{tex [[S]] [ [[l]] \mapsto [[lockstate]] ] }}
+              {{coq (PTree.set [[l]] [[lockstate]] [[S]]) }}
+
+embed
+{{coq
+Definition lockref_lookup (S : state) (l : lockref) : option lockstate :=
+    PTree.get l S.
+
+Definition lockref_fresh (S : state) (l : lockref) : Prop :=
+    lockref_lookup S l = None.
+}}
+
+defns 
+LocalStep :: '' ::=
+    defn 
+    t1 --> t2 :: ::localstep::'' 
+        {{com As a local step, [[t1]] reduces to [[t2]] }} 
+        {{tex [[t1]] \rightarrow [[t2]] }} by
+    
+    ------------------------------------ :: R_Red
+    let x : ST = v in t --> t [ v / x ]
+
+    ------------------------------------------------------------- :: R_Let
+    let x_2 : ST_2 = (let x_1 : ST_1 = e_1 in t_1)  in t_2 --> let x_1 : ST_1 = e_1 in (let x_2 : ST_2 = t_1 in t_2 )
+
+    ----------------------------------------------- :: R_If1
+    let x : ST = < if true then e_1 else e_2 > in t --> let x : ST = e_1 in t
+
+    ----------------------------------------------- :: R_If2
+    let x : ST = < if false then e_1 else e_2 > in t --> let x : ST = e_2 in t
+
+    ----------------------------------------------- :: R_App1
+    let x : ST = < (fn x' : ST' . t') v >in t --> let x : ST = t' [ v / x' ] in t
+
+    ------------------------------------------------ :: R_App2
+    let x : ST = < ( fun f : ST_1 . x' : ST_2 . t' ) v > in t --> let x : ST = (t' [ v / x' ] ) [fun f : ST_1 . x' : ST_2 . t' / f ] in t
+
+defns
+GlobalStep :: '' ::=
+    defn
+    S |- P --> S' |- P' :: :: globalstep::'' 
+        {{tex [[S]] \vdash [[P]] \rightarrow [[S']] \vdash [[P']] }} by
+
+    t_1 --> t_2
+    ------------------ :: R_Lift
+    S |- p < t_1 > --> S |- p < t_2 >
+
+    S |- P1 --> S' |- P1'
+    {{ NoDup (dom_P ([[P1 || P2]])) }}
+    ------------------ :: R_Par
+    S |- P1 || P2 --> S' |-  P1' || P2
+
+    p1 <> p2
+    ------------------------------------------------- ::R_Spawn
+    S |- p1 < let x : ST = spawn t2 in t1 > --> S |- p1 < let x : ST = p2 in t1 > || p2 < t2 >
+
+    S' = S [ l -> free ]
+    {{ lockref_fresh [[S]] [[l]] }}
+    ---------------------------------- :: R_NewL
+    S |- p < let x : ST = newL pi in t > --> S' |- p < let x : ST = l r in t >
+
+    {{ lockref_lookup [[S]] [[l]] = Some [[free]] }}
+    S' = S[l -> p(1)]
+    ---------------------------------------------- :: R_Lock
+    S |- p < let x : ST = l r . lock in t > --> S' |- p < let x : ST = l r in t >
+
+    {{ lockref_lookup [[S]] [[l]] = Some [[p(lc)]] }}
+    S' = S[l -> p(lc + 1)]
+    ---------------------------------------------- :: R_Relock
+    S |- p < let x : ST = l r . lock in t > --> S' |- p < let x : ST = l r in t >
+
+    {{ lockref_lookup [[S]] [[l]] = Some [[p(lc)]] }}
+    S' = S[ l -> dec( p(lc)) ]
+    -------------------------- :: R_Unlock
+    S |- p < let x : ST = l r . unlock in t > --> S' |- p < let x : ST = l r in t >
+

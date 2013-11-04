@@ -1,0 +1,20 @@
+
+grammar
+formula, F :: formula_ ::=
+    | judgement                     ::  :: judgement
+    | syntax_formula                :: M:: syntax_formula {{coq [[syntax_formula]]}}
+    | type_formula                  :: M:: type_formula {{coq [[type_formula]]}}
+    | substitution_formula          :: M:: substitution_formula {{coq [[substitution_formula]]}}
+    | constraint_formula            :: M:: constraint_formula {{coq [[constraint_formula]]}}
+    | free_formula                  :: M:: free_formula {{coq [[free_formula]]}}
+
+    | rho1 , .. , rhok > max_rho    :: :: GreaterRhoList
+                                            {{coq (Forall (le max_rho) [[rho1 .. rhok]])}}
+                    
+
+        
+
+terminals :: 'terminals_' ::=
+    | All                   ::  :: all {{tex \forall }}
+    | <>                    ::  :: neq {{tex \not= }}
+

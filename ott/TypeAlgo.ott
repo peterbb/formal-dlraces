@@ -1,0 +1,267 @@
+embed
+{{coq
+Require Import Arith.Min.
+Require Import Arith.Max.
+
+Require Export Syntax.
+Require Export TypeSyntax.
+Require Import Substitution.
+Require Import FreeVar.
+}}
+
+embed
+{{coq
+
+Open Scope positive.
+Section LiftA.
+    Fixpoint lift_A (ST : simpletype) (max_rho : ls_var) (max_X : le_var) : annotatedtype * ls_var * le_var :=
+        match ST with
+        | st_Bool => (at_Bool, max_rho, max_X)
+        | st_Thread => (at_Thread, max_rho, max_X)
+        | st_Lock => (at_Lock (ls_Var (max_rho + 1)%positive), max_rho + 2, max_X)
+        | st_Arrow ST1 ST2 =>
+
+            let res1 := lift_A ST1 max_rho max_X in
+            let AT1 := fst (fst res1) in
+            let max_rho' := snd (fst res1) in
+            let max_X' := snd res1 in
+
+            let res2 := lift_A ST2 max_rho' max_X' in
+            let AT2 := fst (fst res2) in
+            let max_rho'' := snd (fst res2) in
+            let max_X'' := snd res2 in
+
+            let phi := EffectIntro (le_Var (Pplus max_X'' 1)) (le_Var (Pplus max_X'' 2))
+            in
+                (at_Arrow AT1 phi AT2, max_rho'', Pplus max_X'' 3)
+        end.
+
+End LiftA.
+
+Section UniqueList.
+    Variable T : Type.
+    Variable T_eq : forall (x y : T), {x=y}+{x<>y}.
+    Variable lst : list T.
+
+    Definition unique_element x := (count_occ T_eq lst x) = 0%nat.
+
+    Definition unique := Forall unique_element lst.
+End UniqueList.
+        
+}}
+
+defns 
+ConstraintGeneration :: '' ::=
+    defn
+    AT <= AT' |- C :: ::stategeneration:: ''
+        {{tex [[AT]] \leq [[AT']] \vdash [[C]] }} by
+
+    -------------------------- :: C_Basic1
+    Bool <= Bool |- Empty
+
+    -------------------------- :: C_Basic2
+    Thread <= Thread |- Empty
+
+    --------------------------- :: C_Lock
+    L rho1 <= L  rho2 |-  rho1 <= rho2
+
+    AT'_1 <= AT_1 |- C_1
+    AT_2 <= AT'_2 |- C_2
+    ---------------------------- :: C_Arrow
+    AT_1 - X_1 -> X_2 -> AT_2 <= AT'_1 - X'_1 -> X'_2 -> AT'_2 |- C_1, C_2, X'_1 <= X_1, X_2 <= X'_2
+
+    defn
+    D <= D' |- C :: ::constraintgeneration:: ''
+        {{tex [[D]] \leq [[D']] \vdash [[C]] }} by
+
+    --------------------------- :: C_Id
+    D <= D' |- D <= D'
+
+defns
+LeastUpperBound :: '' ::=
+    defn
+    AT \/ AT' = AT'' ; C :: ::leastupperboundAT:: ''
+        {{tex [[AT]] \lor [[AT']] = [[AT'']] ; [[C]] }} by
+    
+    ---------------------------------------- :: LT_Bool
+    Bool \/ Bool = Bool ; Empty
+
+    ---------------------------------------- :: LT_Thread
+    Thread \/ Thread = Thread ; Empty
+
+    rho <> rho1
+    rho <> rho2
+    L rho1 <= L rho |- C_1
+    L rho2 <= L rho |- C_2
+    -------------------------------------------------- :: LT_Lock
+    L rho1 \/ L rho2  = L rho ; C_1 , C_2
+
+    AT1' /\ AT1'' = AT; C1
+    AT2' \/ AT2'' = AT'; C2
+    phi1 \/ phi2 = phi ; C3
+    -------------------------------------------------- :: LT_Arrow
+    AT1' - phi1 -> AT2' \/ AT1'' - phi2 -> AT2'' = AT1 - phi -> AT2 ; C1, C2, C3
+
+    defn
+    AT /\ AT' = AT'' ; C :: ::greatestlowerboundAT:: ''
+        {{tex [[AT]] \land [[AT']] = [[AT'']] ; [[C]] }} by
+
+    
+    ---------------------------------------------- :: GT_Bool
+    Bool /\ Bool = Bool ; Empty
+
+    ---------------------------------------------- :: GT_Thread
+    Thread /\ Thread = Thread ; Empty
+
+    rho <> rho1
+    rho <> rho2
+    L rho <= L rho1 |- C_1
+    L rho <= L rho2 |- C_2
+    ---------------------------------------------- :: GT_Lock
+    L rho1 /\ L rho2 = L rho ; C_1, C_2
+
+    AT1' \/ AT1'' = AT; C1
+    AT2' /\ AT2'' = AT'; C2
+    phi1 /\ phi2 = phi ; C3
+    -------------------------------------------------- :: GT_Arrow
+    (AT1' - phi1 -> AT2') /\ (AT1'' - phi2 -> AT2'') = (AT1 - phi -> AT2) ; C1, C2, C3
+
+
+    defn
+    D1 \/ D2 = D ; C :: ::leastupperboundD:: ''
+        {{tex [[D1]] \lor [[D2]] = [[D]] ; [[C]] }} by
+
+    
+    D_1 <= X |- C1
+    D_2 <= X |- C2
+    -------------------------------------------------- :: LE_States
+    D_1 \/ D_2 = X ; C1 , C2
+
+    defn
+    D1 /\ D2 = D ; C :: ::greaterlowerboundD:: ''
+        {{tex [[D1]] \land [[D2]] = [[D]] ; [[C]] }} by
+
+    
+    X <= D_1 |- C1
+    X <= D_2 |- C2
+    -------------------------------------------------- :: GE_States
+    D_1 /\ D_2 = X ; C1 , C2
+
+    defn
+    phi1 \/ phi2 = phi ; C :: ::leastupperboundE:: ''
+        {{tex [[phi1]] \lor [[phi2]] = [[phi]] ; [[C]] }} by
+
+    D'1 /\ D''1 = D1 ; C1
+    D'2 \/ D''2 = D2 ; C2
+    -------------------------------------------------- :: LE_Arrow
+    D1 -> D2 \/ D'1 -> D'2 = D1 -> D2 ; C1 , C2
+
+    defn
+    phi1 /\ phi2 = phi ; C :: ::greaterlowerboundE:: ''
+        {{tex [[phi1]] \land [[phi2]] = [[phi]] ; [[C]] }} by
+
+    D'1 \/ D''1 = D1 ; C1
+    D'2 /\ D''2 = D2 ; C2
+    -------------------------------------------------- :: GE_Arrow
+    D1 -> D2 /\ D'1 -> D'2 = D1 -> D2 ; C1 , C2
+
+
+
+defns 
+TypeAndEffectAlgo :: '' ::=
+    defn
+    G ; max_rho ; max_X |- e : AT '::' phi ; C ; max_rho' ; max_X' :: ::welltyped_algo:: ''
+        {{tex ([[max_rho]], [[max_X]]) [[G]] \vdash [[e]] : [[AT]] :: [[phi]] ; [[C]] ([[max_rho']], [[max_X']])}} by
+
+    G(x) = All rho1 .. rhoj X1 .. Xk : C . AT 
+    th = [ X'1 .. X'm / X1 .. Xk ][  rho'1 .. rho'z / rho1 .. rhoj ]
+    unique rho'1 .. rho'z
+    unique X'1 .. X'm
+    rho'1 .. rho'z notIn FV(G)
+    rho'1 .. rho'z notIn FV(C)
+    rho'1 .. rho'z notIn FV(D)
+    X'1 .. X'm notIn FV(G)
+    X'1 .. X'm notIn FV(C)
+    X'1 .. X'm notIn FV(D)
+    max_rho < min(rho'1 .. rho'z)
+    max_X < min(X'1 .. X'm)
+    -------------------------------------- :: TA_Var
+    G ; max_rho ; max_X |- x : th AT :: D -> D ; th C ; max(rho'1 .. rho'z) + 1 ; max(X'1 .. X'm) + 1
+
+
+    max_X < max_X'
+    max_rho < rho 
+    rho < max_rho'
+    -------------------------------------------- :: TA_NewL
+    G ; max_rho ; max_X |- newL pi : L rho :: D -> D ; {pi} <= rho; max_rho' ; max_X'
+
+    max_X < max_X'
+    max_rho < rho' 
+    rho' < max_rho'
+    -------------------------------------------------- :: TA_Lref
+    G ; max_rho ; max_X |- l rho : L rho' :: D -> D ; rho <= rho'; max_rho' ; max_X'
+
+    {{ lift_A [[ST1]] [[:user_syntax__ls_var: max_rho]] [[:user_syntax__le_var: max_X]] = ([[AT1]], [[:user_syntax__ls_var: max_rho']], [[:user_syntax__le_var: max_X']]) }}
+    G, x : <AT1>;  max_rho'; max_X' |- t : AT2 :: X1 -> D2 ; C; max_rho''; max_X''
+    max_X'' < X1
+    X1 < X2
+    X2 < max_X'''
+    ------------------------------------------------- :: TA_Abs1
+    G; max_rho; max_X |- fn x : ST1 . t : AT1 - X1 -> X2 -> AT2 :: D1 -> D1 ; C, D2 <= X2; max_rho''; max_X'''
+
+
+    {{ lift_A [[ST1 -> ST2]] [[:user_syntax__ls_var: max_rho]] [[:user_syntax__le_var: max_X]] = ([[AT1 - X1 -> X2 -> AT2]], [[:user_syntax__ls_var: max_rho']], [[:user_syntax__le_var: max_X']]) }}
+    G, f : <AT1 - X1 -> X2 -> AT2>, x : <AT1>; max_rho'; max_X' |- t : AT'2 :: X1 -> D2 ; C1; max_rho''; max_X''
+    AT'2 <= AT2 |- C2
+    D2 <= X2 |- C3
+    {{ (* No fresh claim X1, X2? *) True }}
+    ------------------------------------------------------- :: TA_Abs2
+    G ; max_rho; max_X |- fun f : ST1 -> ST2 . x : ST1 . t : AT1 - X1 -> X2 -> AT2 :: D1 -> D1 ; C1 , C2 , C3; max_rho''; max_X''
+
+
+    G; max_rho; max_X |- v_1 : AT_2 - D_1 -> D_2 -> AT_1 :: D -> D; C_1; max_rho'; max_X'
+    G; max_rho'; max_X' |- v_2 : AT'_2 :: D -> D ; C_2; max_rho''; max_X''
+    AT'_2 <= AT_2 |- C
+    max_X'' < X
+    X < max_X'''
+    -------------------------------------------------------- :: TA_App
+    G; max_rho; max_X |- v_1 v_2 : AT_1 :: D -> X ; C_1 , C_2, C, D <= D_1 , D_2 <= X; max_rho''; max_X'''
+
+    ST = downAT AT_1
+    ST = downAT AT_2
+    AT_1 \/ AT_2 = AT ; C
+    D1 \/ D2 = D' ; C'
+    G; max_rho; max_X |- v : Bool :: D0 -> D0 ; C0; max_rho'; max_X'
+    G; max_rho'; max_X' |- e1 : AT_1 :: D0 -> D1 ; C1; max_rho''; max_X''
+    G; max_rho''; max_X'' |- e2 : AT_2 :: D0 -> D2 ; C2; max_rho'''; max_X'''
+    ----------------------------------------------------------- :: TA_Cond
+    G; max_rho; max_X |- if v then e1 else e2 : AT :: D0 -> D' ; C0 , C1 , C2 , C , C'; max_rho'''; max_X'''
+
+    G; max_rho; max_X |- e1 : AT1 :: D1 -> D2 ; C1; max_rho'; max_X'
+    downAT AT1 = ST1
+    G, x : SC1; max_rho'; max_X' |- t2 : AT2 :: D2 -> D3 ; C2; max_rho''; max_X''
+    SC1 = close(G, C1, AT1)
+    ------------------------------------------------------------ :: TA_Let
+    G; max_rho ; max_X |- let x : ST1 = e1 in t2 : AT2 :: D1 -> D3 ; C2; max_rho''; max_X''
+
+    G; max_rho; max_X |- t : AT :: Empty -> D2 ; C; max_rho'; max_X'
+    {{ (* Should it really be [[D1 -> D1]] in conclusion? *) True }}
+    ------------------------------------------------------------- :: TA_Spawn
+    G; max_rho; max_X |- spawn t : Thread :: D1 -> D1 ; C; max_rho'; max_X'
+
+
+    G; max_rho; max_X |- v : L rho :: D -> D ; C1; max_rho'; max_X'
+    max_X' < X
+    X < max_X''
+    D + (rho:1) <= X |- C2
+    ------------------------------------------------------------ :: TA_Lock
+    G; max_rho; max_X |- v.lock : L rho :: D -> X; C1 , C2; max_rho'; max_X''
+
+    G; max_rho; max_X |- v : L rho :: D -> D ; C1; max_rho'; max_X'
+    max_X' < X
+    X < max_X''
+    D - (rho:1) <= X |- C2
+    ------------------------------------------------------------ :: TA_Unlock
+    G; max_rho; max_X |- v.unlock : L rho :: D -> X; C1 , C2; max_rho'; max_X''
+
+

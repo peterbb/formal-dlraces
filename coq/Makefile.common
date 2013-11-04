@@ -1,0 +1,38 @@
+OTT_PATH=/hom/pma/src/ott_distro_0.21.2/coq/ # This should work at the UiO unix cluster.
+#OTT_PATH=/home/peterbb/src/ott_distro_0.21.2/coq/ 
+
+COQ_FILES= Zinf.v Syntax.v Semantics.v TypeSyntax.v \
+    FreeVar.v TypeSpec.v TypeDirected.v TypeAlgo.v\
+    Lemmas_constraints.v Lemmas_4_3.v \
+    Lemmas_subtype.v \
+    Lemmas_abstrstate_order.v \
+    Lemma_4_6.v \
+    Lemmas_spec.v \
+    Lemmas_lub.v \
+    Constraint.v Soundness.v
+
+.SUFFIXES: .v .vo .run
+
+.PHONY: ott
+
+default: .depend ${COQ_FILES:%.v=%.vo}
+
+.depend: ${COQ_FILES}
+	coqdep -I ${OTT_PATH} -I ./lib lib > .depend
+	coqdep -I ${OTT_PATH} -I ./ -I ./lib ${COQ_FILES} >> .depend
+
+.v.vo:
+	coqc -I ${OTT_PATH} -I . -I ./lib/ $<
+
+ott:
+	cd .. && $(MAKE)
+
+
+clean:
+	- rm -f *.glob *.vo lib/*.glob lib/*.vo .depend
+
+realclean: clean
+	- rm .depend
+
+.v.run:
+	coqtop -I ${OTT_PATH} -I ./lib -I . -lv $<

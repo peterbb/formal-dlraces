@@ -1,0 +1,22 @@
+----- REQUIREMENTS -------
+Tested with COQ version:
+    $ coqtop --version
+    The Coq Proof Assistant, version 8.4pl2 (May 2013)
+    compiled on May 28 2013 19:32:56 with OCaml 4.00.1
+    $ 
+
+Tested with OTT version:
+    Ott version 0.21.2   distribution of Fri Jan 13 11:45:17 GMT 2012
+
+Tested with GNU and BSD make.
+
+----- RUNNING -------
+Edit the file ./coq/Makefile so that the variable OTT_PATH
+points to the location where OTT's auxiliary COQ-files are
+located.
+
+Running ``make'' in ./ will cause everything to be built.
+
+Note that running ``make'' may take several minutes (ca 4 minutes
+on my computer).
+
