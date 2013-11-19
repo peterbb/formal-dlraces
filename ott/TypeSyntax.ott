@@ -1,0 +1,183 @@
+indexvar index, k, j, m, z ::= {{coq nat}} {{ coq-equality }}
+
+embed 
+{{coq
+Require Export PArith.
+Require Import ZArith.
+Require Export Structures.Equalities.
+
+Require Export List.
+
+Require Import Syntax.
+Require Export Zinf.
+
+
+}}
+
+metavar n ::= {{coq Zinf}} {{ coq-equality repeat decide equality. }}
+
+grammar
+
+type_formula :: type_formula_ ::=
+    | phi = phi'            :: M:: phi_Eq {{coq ([[phi]] = [[phi']])}}
+    | ST = ST'              :: M:: ST_Eq {{coq ([[ST]] = [[ST']])}}
+    | SC = SC'              :: M:: SC_Eq {{coq ([[SC]] = [[SC']])}}
+    | S = S'                :: M:: S_Eq {{coq ([[S]] = [[S']])}}
+    | X < X'                :: M:: X_Lt {{coq ([[X]] < [[X']])%positive }}
+    | X <> X'               :: M:: X_NotEq {{coq ([[X]] <> [[X']])%positive }}
+    | unique X1 .. Xk       :: M:: X_unique
+                                   {{coq (unique _ eq_le_var [[X1 .. Xk]])}}
+    | unique rho1 .. rhok   :: M:: rho_unique
+                                    {{coq (unique _ eq_ls_var [[rho1 .. rhok]])}}
+    | D <= D'               :: M:: PointwiseEq
+                                   {{coq (pointwise_leq [[D]] [[D']])}} 
+
+
+le_var, X, max_X {{tex X_{max} }} :: 'le_var' ::= {{coq positive }}
+    | X + 1                         ::  :: Inc {{coq ([[X]] + 1)%positive }}
+    | max( X1 .. Xk )               ::  :: Max {{coq (fold_left Pos.max [[X1 .. Xk]] 1%positive) }}
+    | min( X1 .. Xk )               ::  :: Min {{coq (fold_left Pos.min [[X1 .. Xk]] 1%positive) }}
+    | const X                       :: M:: Ambiguity {{icho [[X]] }}
+    
+
+lockenv, D {{tex \Delta}} :: le_ ::= {{com Lock Environment expression}}
+    | Empty                         ::  :: Empty {{tex \bullet }}
+    | X                             ::  :: Var
+    | D , r : n                     ::  :: Append
+    | D + D'                        ::  :: Add {{tex [[D]] \oplus [[D']] }}
+    | D - D'                        ::  :: Sub {{tex [[D]] \ominus [[D']] }}
+    | ( r : 1 )                     :: M:: IntroSingle
+        {{coq (le_Append le_Empty [[r]] (Zinf_Z 1))}}
+    | ( D )                         :: M:: Paren {{icho [[D]] }}
+
+ineq :: c_ ::= {{com Single Constraint}}
+    | r <= r'                       ::  :: LockSet {{tex [[r]] \sqsubseteq [[r']]}}
+    | D <= D'                       ::  :: LockEnv {{tex [[D]] \leq [[D']] }}
+
+embed
+{{coq
+
+(*
+Module MiniDecIneq <: MiniDecidableType.
+    Definition t := ineq.
+    Lemma eq_dec: forall (x y : t), {x=y}+{x<>y}.
+    Proof.
+        repeat decide equality.
+    Qed.
+End MiniDecIneq.
+
+Module UDT_Ineq := Make_UDT MiniDecIneq.
+
+Module Export IneqSet := MSetWeakList.Make UDT_Ineq.
+Module Export IneqSetProp := WPropertiesOn UDT_Ineq IneqSet.
+*)
+
+(*
+Module IneqSet.
+    Definition t := list ineq.
+    Definition empty : t := nil.
+    Definition singleton x : t := x :: nil.
+    Definition union a b : t := a ++ b.
+    Definition elements x : t := x.
+    Definition add a x : t := a :: x.
+    Definition fold {B} f x b := @fold_right B ineq f b x.
+End IneqSet.
+*)
+
+
+}}
+
+grammar
+constraints, C :: c_ ::= {{com Constraint}} {{coq list ineq}}
+    | Empty                         :: M:: Empty {{tex \emptyset}}
+                                            {{coq (@nil ineq)}}
+    | ineq                          :: M:: Single
+                                            {{coq (cons [[ineq]] nil)}}
+    | C , C'                        :: M:: Join
+                                            {{coq ([[C]] ++ [[C']])}}
+    | th C                          :: M:: Subst
+        {{coq (lift_subst_C [[th]] [[C]]) }}
+
+
+grammar
+effect, phi {{tex \varphi}} :: Effect ::= {{com Effect}}
+    | D_1 -> D_2                    ::  :: Intro {{tex [[D_1]] \rightarrow [[D_2]] }}
+
+annotatedtype, AT {{tex \hat{T} }} :: at_ ::= {{com Annotated Type}}
+    | Bool                          ::  :: Bool
+    | Thread                        ::  :: Thread
+    | L r                           ::  :: Lock {{tex [[L]]^{ [[r]] } }}
+    | AT_1 - phi -> AT_2            ::  :: Arrow {{tex [[AT_1]] \xrightarrow{ [[phi]]} [[AT_2]] }}
+    | th AT                         :: M:: Substitute 
+                                           {{coq (lift_subst_AT [[th]] [[AT]]) }}
+    | ( AT )                        :: S:: Paren {{icho [[AT]] }}
+
+
+scheme, SC {{tex \hat{S} }} :: sc_ ::= {{com Typescheme}} {{coq-universe Type}}
+    | All rho_1 .. rho_k X1 .. Xj : C . AT  
+                                    ::  :: Quant 
+                                           (+ bind rho_1 .. rho_k in C +)
+                                           (+ bind rho_1 .. rho_k in AT +)
+                                           (+ bind X1 .. Xj in C +)
+                                           (+ bind X1 .. Xj in AT +)
+    | < AT >                        :: S:: Simple {{tex [[AT]] }}
+                                            {{icho (sc_Quant nil nil nil [[AT]]) }}
+    | th SC                         :: M:: Substitute
+                                           {{coq (lift_subst_SC [[th]] [[SC]]) }}
+    | close( G , C , AT )           :: M:: Close
+                                           {{coq (sc_close [[G]] [[C]] [[AT]])}}
+program_type, Phi {{tex \Phi}} :: pt_ ::= {{com Program type}} {{coq-universe Type}}
+    | p < phi ; C >                   ::  :: Single 
+                                            {{tex [[p]] \langle [[phi]];[[C]] \rangle }}
+    | Phi || Phi'                   ::  :: Parallell
+
+grammar context, G {{tex \Gamma}} :: 'G_' ::=  {{coq-universe Type}}
+    | empty                         ::  :: Empty {{tex \epsilon}} {{com Empty context}}
+    | G , x : SC                    ::  :: Extend {{com Extend [[G]] with [[x]] : [[SC]] }}
+    | ( G )                         :: S:: Paren {{icho [[G]] }}
+
+parsing
+    c_Join left c_Join
+
+defns
+ContextLookup :: '' ::=
+    defn
+    G ( x ) = SC :: ::ContextLookup::''
+        {{com [[x]] is bound to [[SC]] in [[G]] }}
+        {{tex [[G]]([[x]]) = [[SC]] }} by
+
+    --------------------------------- :: LookupAx
+    (G, x : SC) (x) = SC
+
+
+    x <> x'
+    G(x) = SC
+    --------------------------------- :: LookupNext
+    (G, x' : SC')(x) = SC
+    
+
+embed
+{{coq
+
+Definition eq_le_var := Pos.eq_dec.
+
+}}
+
+
+funs
+    DownAT ::=
+fun
+    downAT AT :: ST :: downAT {{tex \lfloor [[AT]] \rfloor }}
+by
+    downAT Bool === Bool
+    downAT Thread === Thread
+    downAT L r === L
+    downAT AT1 - phi -> AT2 === (downAT AT1) -> (downAT AT2)
+
+funs
+    DownSC ::=
+fun
+    downSC SC :: ST :: downSC {{tex \lfloor [[SC]] \rfloor }}
+by
+    downSC All rho1 .. rhok X1 .. Xj : C . AT === downAT AT
+
