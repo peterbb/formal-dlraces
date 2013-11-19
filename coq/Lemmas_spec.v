@@ -3,7 +3,6 @@ Require Import Setoid.
 Require Import Program.Tactics.
 Require Import Program.Equality.
 
-Require Import List.
 Require Import Syntax TypeSyntax Constraint TypeSpec.
 Require Import Lemmas_constraints.
 Require Import Lemmas_abstrstate_order.

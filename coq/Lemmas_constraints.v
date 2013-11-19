@@ -1,5 +1,4 @@
 
-Require Import List.
 Require Import TypeSyntax.
 Require Import Constraint.
 Require Import MSetPositive.

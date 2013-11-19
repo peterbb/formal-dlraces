@@ -1,5 +1,4 @@
 Require Import Program.
-Require Import List.
 
 Require Import TypeSpec TypeAlgo.
 

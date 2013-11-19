@@ -1,5 +1,4 @@
 Require Import PArith.
-Require Import List.
 
 Require Import Program.
 
@@ -58,8 +57,8 @@ Lemma subset_subtype:
     forall C r1 r2,
     (denote_constraints C -> denote_constraints [c_LockSet r1 r2]) ->
     forall G t E,
-    welltyped_spec C G t (at_Lock r1) E ->
-    welltyped_spec C G t (at_Lock r2) E.
+    welltyped_spec C G t (sc_Quant [] [] [] (at_Lock r1)) E ->
+    welltyped_spec C G t (sc_Quant [] [] [] (at_Lock r2)) E.
 Proof.
     intros C r1 r2 H G t E H'.
     dependent induction H'; eauto with strengthen.
@@ -69,8 +68,8 @@ Lemma spec_subtype:
     forall AT AT' C,
         subtype C AT AT' ->
     forall G t E,
-        welltyped_spec C G t AT  E ->
-        welltyped_spec C G t AT' E.
+        welltyped_spec C G t (sc_Quant nil nil nil AT) E ->
+        welltyped_spec C G t (sc_Quant nil nil nil AT') E.
 Proof.
 Admitted.
 

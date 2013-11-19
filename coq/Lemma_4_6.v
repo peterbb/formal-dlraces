@@ -31,7 +31,7 @@ Section LEMMA_4_6.
           destruct IHsubtype1 as [T1'' [T2'' [D1'' [D2'' IH1]]]].
           exists T1'' T2'' D1'' D2''; 
             intuition; eauto using subtype_trans, abstrstate_order_trans.
-        - exists AT1 AT2 D1 D2; intuition.
-    Admitted.
+        - exists AT_1 AT_2 D_1 D_2; intuition.
+    Qed.
 
 End LEMMA_4_6.

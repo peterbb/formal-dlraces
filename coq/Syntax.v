@@ -3,12 +3,9 @@ Require Export PArith.
 
 Definition lockref : Set := nat.
 Definition variable : Set := nat.
-Definition programpoint : Set := positive.
+Definition programpoint : Set := nat.
 Definition processid : Set := nat.
-
 Definition ls_var : Set := positive.
-Lemma eq_ls_var: forall (x y : ls_var), {x=y}+{x<>y}.
-Proof. decide equality. Qed.
 
 Inductive lockset : Set :=
  | ls_Var    (rho :ls_var)
@@ -40,9 +37,6 @@ with value : Set :=
  | v_ProcessId (p:processid)
  | v_Fun (x:variable) (ST:simpletype) (t:thread)
  | v_RecFun (f:variable) (ST_1:simpletype) (x:variable) (ST_2:simpletype) (t:thread).
-
- Coercion t_Value : value >-> thread.
- Coercion e_Thread : thread >-> expr.
 
 Inductive program : Set :=
  | P_Empty : program

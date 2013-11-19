@@ -60,7 +60,7 @@ Ltac solve_freevars :=
 Lemma Lemma_4_4_Soundness:
     forall G t AT D1 D2 C max_rho max_X max_rho' max_X',
         welltyped_algo G max_rho max_X t AT (EffectIntro D1 D2) C max_rho' max_X' ->
-        welltyped_spec C G t (sc_All nil nil nil AT) (EffectIntro D1 D2).
+        welltyped_spec C G t (sc_Quant nil nil nil AT) (EffectIntro D1 D2).
 Proof.
     Hint Resolve subtype_weaken_l.
     Hint Resolve subtype_weaken_r.
@@ -83,9 +83,7 @@ Proof.
         admit. (* Not correct. *)
 
     - (* TA_App  ============================================================ *)
-        admit.
-    (*
-        apply T_App with (AT2:=AT2).
+        apply T_App with (AT_2:=AT_2).
         * apply T_Sub with (AT_2:= at_Arrow AT_2 (EffectIntro D_1 D_2) AT_1)
                            (D_1:=D)(D_2:=D);
             auto with strengthen.                    
@@ -93,21 +91,14 @@ Proof.
                            (D_1:=D)(D_2:=D); auto.
           apply spec_subtype with (AT:=AT'_2);
           auto using lemma_4_3_1_a with strengthen.
-     *)
 
     - (* TA_Cond ============================================================ *)
-        admit.
-        (*
         apply T_Cond; auto with strengthen;
         [ apply T_Sub with (AT_2:=AT_1) (D_1:=D0) (D_2:=D3)
         | apply T_Sub with (AT_2:=AT_2) (D_1:=D0) (D_2:=D4)
         ];  eauto with strengthen lub.
-        *)
-
 
     - (* TA_Let ============================================================ *)
-        admit.
-        (*
         apply T_Let with (SC_1:=SC1)(D_2:=D4); subst *; auto.
         cut (welltyped_spec nil G e1 (sc_close G C1 AT1) (EffectIntro D0 D4));
         auto with strengthen.
@@ -115,7 +106,6 @@ Proof.
         try solve_freevars;
         rewrite Forall_forall; intros x0 H''; change (~ PositiveSet.In x0 PS.empty);
         destruct x0; compute; discriminate.
-        *)
 
     - (* TA_Spawn ============================================================ *)
         eapply T_Spawn; eauto.

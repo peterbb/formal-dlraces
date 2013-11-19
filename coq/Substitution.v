@@ -129,7 +129,7 @@ Section LiftSubst.
         | _ => AT
         end.
 
-    Definition lift_subst_ineq (c : inequality) : inequality :=
+    Definition lift_subst_ineq (c : ineq) : ineq :=
         match c with
         | c_LockSet r1 r2 =>
             c_LockSet (lift_subst_r r1) (lift_subst_r r2)
@@ -156,14 +156,14 @@ Section LiftSubstSC.
 
     Definition lift_subst_SC (SC : scheme) : scheme := 
         match SC with
-        | sc_All   rhos Xs C AT =>
+        | sc_Quant rhos Xs C AT =>
             let mx := 1 + th_max + (max_set (free_le_C C)) +
                                (max_set (free_ls_C C)) +
                                (max_set (free_ls_AT AT)) +
                                (max_set (free_le_AT AT)) 
             in let su := mk_shift_bound mx Xs rhos
             in
-                sc_All   (map (fun rho => rho + mx) rhos)
+                sc_Quant (map (fun rho => rho + mx) rhos)
                          (map (fun X => X + mx) Xs )
                          (lift_subst_C th_and_freevars (lift_subst_C (su, nil, nil) C))
                          (lift_subst_AT th_and_freevars (lift_subst_AT (su, nil, nil) AT))
